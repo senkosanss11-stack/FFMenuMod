@@ -31,7 +31,11 @@ jobs:
       - name: Compile Tweak Binary
         run: |
           export THEOS=/home/runner/theos
-          if [ -d "template" ]; then
-            cd template
+          MAKEFILE_PATH=$(find . -name "Makefile" -not -path "*/theos/*" | head -n 1)
+          if [ -z "$MAKEFILE_PATH" ]; then
+            echo "Error: Makefile not found in repository!"
+            exit 1
           fi
+          PROJECT_DIR=$(dirname "$MAKEFILE_PATH")
+          cd "$PROJECT_DIR"
           make package FINALPACKAGE=1 TARGET=iphone:clang::
