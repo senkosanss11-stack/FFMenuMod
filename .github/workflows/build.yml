@@ -1,36 +1,22 @@
 name: Build iOS Mod Menu
-
 on:
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout Project Source
         uses: actions/checkout@v4
 
-      - name: Install Compiler Dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y bzip2 build-essential perl git curl unzip lzma libtool libssl-dev clang lld llvm
-
-      - name: Set Up Theos Environment
-        run: |
-          git clone --recursive https://github.com/theos/theos.git /home/runner/theos
-          echo "THEOS=/home/runner/theos" >> $GITHUB_ENV
-
-      - name: Download iOS SDK Configuration
-        run: |
-          curl -L https://github.com/theos/sdks/archive/refs/heads/master.zip -o sdks.zip
-          unzip -q sdks.zip -d /home/runner/theos/
-          mv /home/runner/theos/sdks-master/* /home/runner/theos/sdks/
-          rm -rf sdks.zip /home/runner/theos/sdks-master
+      - name: Setup Theos (toolchain + SDK + ldid)
+        uses: Randomblock1/theos-action@v1
+        with:
+          theos-dir: 'theos'
 
       - name: Compile Tweak Binary
         run: |
-          export THEOS=/home/runner/theos
+          export THEOS=${{ github.workspace }}/theos
           MAKEFILE_PATH=$(find . -name "Makefile" -not -path "*/theos/*" | head -n 1)
           if [ -z "$MAKEFILE_PATH" ]; then
             echo "Error: Makefile not found in repository!"
@@ -38,4 +24,10 @@ jobs:
           fi
           PROJECT_DIR=$(dirname "$MAKEFILE_PATH")
           cd "$PROJECT_DIR"
-          make package FINALPACKAGE=1 TARGET=iphone:clang::messages
+          make package FINALPACKAGE=1 TARGET=iphone:clang:: PREFIX=
+
+      - name: Upload built .deb
+        uses: actions/upload-artifact@v4
+        with:
+          name: tweak-package
+          path: "**/packages/*.deb"
