@@ -14,7 +14,7 @@ jobs:
       - name: Install Compiler Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y bzip2 build-essential perl git curl unzip lzma libtool libssl-dev clang lld iOS-toolchain-linux
+          sudo apt-get install -y bzip2 build-essential perl git curl unzip lzma libtool libssl-dev clang lld
 
       - name: Set Up Theos Environment
         run: |
@@ -23,10 +23,10 @@ jobs:
 
       - name: Download iOS Toolchain for Linux
         run: |
-          curl -LO https://github.com/theos/toolchain/releases/download/linux-arm64/toolchain-linux-arm64.tar.gz
+          curl -LO https://github.com/theos/toolchain/releases/download/linux-x86_64/toolchain-linux-x86_64.tar.gz
           mkdir -p /home/runner/theos/toolchain/linux/iphone
-          tar -xf toolchain-linux-arm64.tar.gz -C /home/runner/theos/toolchain/linux/iphone
-          rm -f toolchain-linux-arm64.tar.gz
+          tar -xf toolchain-linux-x86_64.tar.gz -C /home/runner/theos/toolchain/linux/iphone
+          rm -f toolchain-linux-x86_64.tar.gz
 
       - name: Download iOS SDK Configuration
         run: |
