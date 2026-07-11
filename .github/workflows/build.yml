@@ -31,4 +31,7 @@ jobs:
       - name: Compile Tweak Binary
         run: |
           export THEOS=/home/runner/theos
+          if [ -d "template" ]; then
+            cd template
+          fi
           make package FINALPACKAGE=1 TARGET=iphone:clang::
