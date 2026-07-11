@@ -5,25 +5,30 @@ on:
 
 jobs:
   build:
-    runs-on: macos-13
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Project Source
         uses: actions/checkout@v4
 
+      - name: Install Compiler Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bzip2 build-essential perl git curl unzip lzma libtool libssl-dev clang lld
+
       - name: Set Up Theos Environment
         run: |
-          bash -c "$(curl -fsSL https://raw.githubusercontent.com/theos/theos/master/bin/install-theos)"
-          echo "THEOS=/Users/runner/theos" >> $GITHUB_ENV
+          git clone --recursive https://github.com/theos/theos.git /home/runner/theos
+          echo "THEOS=/home/runner/theos" >> $GITHUB_ENV
 
       - name: Download iOS SDK Configuration
         run: |
           curl -L https://github.com/theos/sdks/archive/refs/heads/master.zip -o sdks.zip
-          unzip -q sdks.zip -d /Users/runner/theos/
-          mv /Users/runner/theos/sdks-master/* /Users/runner/theos/sdks/
-          rm -rf sdks.zip /Users/runner/theos/sdks-master
+          unzip -q sdks.zip -d /home/runner/theos/
+          mv /home/runner/theos/sdks-master/* /home/runner/theos/sdks/
+          rm -rf sdks.zip /home/runner/theos/sdks-master
 
       - name: Compile Tweak Binary
         run: |
-          export THEOS=/Users/runner/theos
-          make package FINALPACKAGE=1
+          export THEOS=/home/runner/theos
+          make package FINALPACKAGE=1 TARGET=iphone:clang::
