@@ -1,0 +1,29 @@
+name: Build iOS Mod Menu
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout Project Source
+        uses: actions/checkout@v4
+
+      - name: Set Up Theos Environment
+        run: |
+          bash -c "$(curl -fsSL https://raw.githubusercontent.com/theos/theos/master/bin/install-theos)"
+          echo "THEOS=/Users/runner/theos" >> $GITHUB_ENV
+
+      - name: Download iOS SDK Configuration
+        run: |
+          curl -L https://github.com/theos/sdks/archive/refs/heads/master.zip -o sdks.zip
+          unzip sdks.zip -d /Users/runner/theos/
+          mv /Users/runner/theos/sdks-master/* /Users/runner/theos/sdks/
+          rm -rf sdks.zip /Users/runner/theos/sdks-master
+
+      - name: Compile Tweak Binary
+        run: |
+          export THEOS=/Users/runner/theos
+          make package LOG=1
