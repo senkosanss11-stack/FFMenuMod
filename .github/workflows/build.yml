@@ -1,33 +1,83 @@
-name: Build iOS Mod Menu
+name: Build iOS Tweak
+
 on:
+  push:
+    branches: [ main, master ]
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout Project Source
+      - name: Checkout source code
         uses: actions/checkout@v4
 
-      - name: Setup Theos (toolchain + SDK + ldid)
-        uses: Randomblock1/theos-action@v1
-        with:
-          theos-dir: 'theos'
-
-      - name: Compile Tweak Binary
+      - name: Install system dependencies
         run: |
-          export THEOS=${{ github.workspace }}/theos
-          MAKEFILE_PATH=$(find . -name "Makefile" -not -path "*/theos/*" | head -n 1)
-          if [ -z "$MAKEFILE_PATH" ]; then
-            echo "Error: Makefile not found in repository!"
+          sudo apt-get update
+          sudo apt-get install -y git curl tar make perl file
+
+      - name: Setup Theos and toolchain
+        id: setup
+        run: |
+          export THEOS="$HOME/theos"
+          mkdir -p "$THEOS"
+
+          # Clone Theos core
+          git clone --depth 1 https://github.com/theos/theos.git "$THEOS"
+
+          cd "$THEOS"
+
+          # Danh sách các URL toolchain (thử từ chính thức đến dự phòng)
+          TOOLCHAIN_URLS=(
+            "https://github.com/theos/toolchain/releases/download/1.0.0/toolchain-linux-x86_64.tar.gz"
+            "https://github.com/theos/toolchain/releases/latest/download/toolchain-linux-x86_64.tar.gz"
+            "https://github.com/Diatrus/toolchain/releases/download/1.0/toolchain-linux-x86_64.tar.gz"
+            "https://github.com/ios-repo/toolchain/releases/download/1.0/toolchain-linux-x86_64.tar.gz"
+          )
+
+          DOWNLOAD_SUCCESS=0
+          for url in "${TOOLCHAIN_URLS[@]}"; do
+            echo "Trying to download from: $url"
+            if curl -L --fail -o toolchain.tar.gz "$url"; then
+              # Kiểm tra file có phải HTML (404) không
+              if file toolchain.tar.gz | grep -q "HTML"; then
+                echo "Downloaded file is HTML (404 error). Skipping..."
+                rm -f toolchain.tar.gz
+                continue
+              fi
+              DOWNLOAD_SUCCESS=1
+              break
+            fi
+          done
+
+          if [ $DOWNLOAD_SUCCESS -eq 0 ]; then
+            echo "❌ All toolchain download attempts failed."
             exit 1
           fi
-          PROJECT_DIR=$(dirname "$MAKEFILE_PATH")
-          cd "$PROJECT_DIR"
-          make package FINALPACKAGE=1 TARGET=iphone:clang:: PREFIX=
 
-      - name: Upload built .deb
+          # Giải nén toolchain
+          tar -xf toolchain.tar.gz
+          rm -f toolchain.tar.gz
+
+          # Cấp quyền thực thi
+          chmod +x "$THEOS"/toolchain/linux/iphone/bin/*
+
+          # Thiết lập biến môi trường cho các bước sau
+          echo "THEOS=$THEOS" >> "$GITHUB_ENV"
+          echo "PATH=$THEOS/toolchain/linux/iphone/bin:$PATH" >> "$GITHUB_ENV"
+
+      - name: Build tweak
+        run: |
+          # Nếu bạn có Makefile chuẩn của Theos
+          make clean
+          make
+        env:
+          THEOS: ${{ env.THEOS }}
+
+      - name: Upload built packages (tùy chọn)
         uses: actions/upload-artifact@v4
         with:
-          name: tweak-package
-          path: "**/packages/*.deb"
+          name: deb-packages
+          path: ./*.deb
